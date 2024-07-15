@@ -1,0 +1,776 @@
+<template>
+	<div class="page">
+		<view :style="{ height: height }">
+			<swiper class="swiper" :vertical="true" @change="changeCurrent" @animationfinish="animationFinish"
+				:current="index">
+				<swiper-item v-for="(item, idx) in videoList" :key="idx" class="swiper-item">
+					<!-- 视频渲染数预加载数影响性能 -->
+					<div v-if="Math.abs(index-idx)<=1" class="video-box">
+						<block v-if="item.src">
+							<chunlei-video class="video" :videoId="item.id" :src="item.src" :poster="item.poster"
+								:height="height" :width="width" :play="item.flag" v-if="Math.abs(index-idx)<=1"
+								:gDuration="item.duration" :initialTime="item.initialTime" @pause="pauseVideo"
+								:objectFit="item.objectFit" @playEnd="playEnd" :danmuList="danmuList">
+							</chunlei-video>
+
+							<cover-view class="cover-view-left">
+								<cover-view class="left-view" @click="jump(item.card_id)">
+									<!-- #ifdef APP-PLUS-NVUE -->
+									<text class="left-text">@{{item.at}}</text>
+									<!-- #endif -->
+									<!-- #ifndef APP-PLUS-NVUE -->
+									<cover-view class="left-text">@{{item.at}}</cover-view>
+									<!-- #endif -->
+								</cover-view>
+								<!-- /* #ifndef APP-PLUS */
+								white-space: pre-wrap;
+								text-overflow: ellipsis;
+								overflow: hidden;
+								/* #endif */ -->
+								<cover-view class="left-view">
+									<!-- #ifdef APP-PLUS-NVUE -->
+									<text class="left-text" style="width: 600rpx;">
+										<scroll-view scroll-x="true" style="width: 600rpx;white-space: nowrap;">
+											<cover-view style="display: inline-flex;">
+												<cover-view
+													style="width: 600rpx;white-space: pre-wrap">{{item.article_content}}</cover-view>
+											</cover-view>
+
+										</scroll-view>
+
+									</text>
+									<!-- #endif -->
+									<!-- #ifndef APP-PLUS-NVUE -->
+									<cover-view class="left-text" style="width: 600rpx;">
+										<scroll-view scroll-x="true" style="width: 600rpx;white-space: nowrap;">
+											<cover-view style="display: inline-flex;">
+												<cover-view
+													style="width: 600rpx;white-space: pre-wrap">{{item.article_content}}</cover-view>
+											</cover-view>
+
+										</scroll-view>
+
+									</cover-view>
+									<!-- #endif -->
+								</cover-view>
+							</cover-view>
+							<cover-view class="cover-view-right">
+								<!-- <cover-image src="@/static/wode.png" class="img" @click.stop="tapUser">
+								</cover-image> -->
+
+								<cover-image v-if="item.like_status == 0" src="/static/video/like_f.png"
+									class="avater1 img" style="width: 70rpx;height: 70rpx;margin-top: 10rpx;"
+									@click.stop="likec(item)"></cover-image>
+
+								<cover-image v-if="item.like_status == 1" src="/static/video/like_o.png"
+									class="avater1 img" style="width: 70rpx;height: 70rpx;margin-top: 10rpx;"
+									@click.stop="likec(item)"></cover-image>
+
+								<cover-view
+									style="color: #fff;text-align: center;">{{item.like_num>9999?((item.like_num/1000).toFixed(0))+"万":item.like_num}}</cover-view>
+
+
+
+								<cover-image v-if="item.collect_status == 0" src="/static/video/collect_f.png"
+									class="avater1 img" style="width: 70rpx;height: 70rpx;margin-top: 10rpx;"
+									@click.stop="collect(item)"></cover-image>
+
+								<cover-image v-if="item.collect_status == 1" src="/static/video/collect_o.png"
+									class="avater1 img" style="width: 70rpx;height: 70rpx;margin-top: 15rpx;"
+									@click.stop="collect(item)"></cover-image>
+
+								<cover-view
+									style="color: #fff;text-align: center;">{{item.collect_num>9999?((item.collect_num/1000).toFixed(0))+"万":item.collect_num}}</cover-view>
+
+								<cover-image v-if="item.card_id" src="/static/video/store.png" class="avater1 img"
+									style="width: 70rpx;height: 70rpx;margin-top: 15rpx;"
+									@click.stop="jump(item.card_id)"></cover-image>
+
+								<cover-image v-if="item.mobile" src="/static/video/concat.png" class="avater1 img"
+									style="width: 70rpx;height: 70rpx;margin-top: 15rpx;"
+									@click.stop="concat(item)"></cover-image>
+
+								<cover-image src="/static/video/rel.png"
+									style="width: 70rpx;height: 70rpx;margin-top: 15rpx;" class="avater img"
+									@click.stop="tapAvater"></cover-image>
+
+								<!-- <cover-view class="right-text1" @click="opt(item)">更多操作</cover-view>
+								 -->
+							</cover-view>
+							<cover-view class="cover-view-center" v-if="item.showRedPacket">
+								<cover-image class="redbox-image" src="https://m.huomeng100.com/file/hongbao_bg.png">
+								</cover-image>
+								<cover-view class="wrapBox">
+									<cover-view v-if="money==0" class="wrapBox-tips">
+										<!-- #ifdef APP-PLUS-NVUE -->
+										<text class="tips">恭喜您获得红包！</text>
+										<!-- #endif -->
+										<!-- #ifndef APP-PLUS-NVUE -->
+										<cover-view class="tips">恭喜您获得红包！</cover-view>
+										<!-- #endif -->
+									</cover-view>
+									<cover-view v-if="money>0" class="wrapBox-tips">
+										<!-- #ifdef APP-PLUS-NVUE -->
+										<text class="tips">恭喜您成功领取红包！</text>
+										<!-- #endif -->
+										<!-- #ifndef APP-PLUS-NVUE -->
+										<cover-view class="tips">恭喜您成功领取红包！</cover-view>
+										<!-- #endif -->
+									</cover-view>
+									<cover-view class="wrapBox-money money" v-if="money>0">
+										<!-- #ifdef APP-PLUS-NVUE -->
+										<text class="wrapBox-text">￥{{money}}</text>
+										<!-- #endif -->
+										<!-- #ifndef APP-PLUS-NVUE -->
+										<cover-view class="wrapBox-text">￥{{money}}</cover-view>
+										<!-- #endif -->
+
+									</cover-view>
+									<cover-view v-if="money==0" class="wrapBox-btn" @click="update">
+
+										<!-- #ifdef APP-PLUS-NVUE -->
+										<text>领</text>
+										<!-- #endif -->
+										<!-- #ifndef APP-PLUS-NVUE -->
+										<cover-view>领</cover-view>
+										<!-- #endif -->
+									</cover-view>
+								</cover-view>
+								<cover-view class="close redbox-close" @click="closeMask">
+									<cover-image style="width: 64rpx;height: 64rpx;margin: 0 auto;"
+										src="@/static/guanbi.png"></cover-image>
+								</cover-view>
+								<!-- </cover-view> -->
+							</cover-view>
+						</block>
+						<cover-image src="https://m.huomeng100.com/file/logo.jpg" :style="{ height: height }" v-else
+							class="video-box"></cover-image>
+					</div>
+
+				</swiper-item>
+
+			</swiper>
+		</view>
+
+		<zhuanfa v-if="show_flag" :odata="odata" @closez="closez"></zhuanfa>
+
+
+	</div>
+</template>
+<script>
+	import config from '@/config.js';
+	import chunleiVideo from '@/components/chunlei-video/chunlei-video';
+	import zhuanfa from "./zhaunfa.vue";
+	export default {
+		components: {
+			chunleiVideo,
+			zhuanfa,
+		},
+		data() {
+			return {
+				isMask: true, //是否显示弹窗
+				money: 0, //红包金额
+
+				sysheight: 0,
+				playCount: 2, //剩余多少视频加载视频列表
+				videoList: [],
+				height: '667px',
+				index: 0,
+				width: '',
+				oldIndex: 0,
+				danmuList: [],
+
+				no_more: null,
+				/*一页多少条*/
+				list_rows: 10,
+				/*当前第几页*/
+				page: 1,
+				platform: '', //平台
+				show_flag: false,
+				odata: {
+					arr: [{
+						id: 1,
+						text: "联系",
+						image: "/static/concat.png",
+						val: ""
+					}, {
+						id: 2,
+						text: this.$nw("收藏"),
+						text1: this.$nw("取消收藏"),
+						image: "/static/nocollect.png",
+						image1: "/static/collect.png",
+						val: ""
+					}],
+					video_id: 0,
+				}
+			}
+		},
+		props: ["id"],
+		created() {
+			//#ifdef APP-PLUS
+			plus.screen.lockOrientation("portrait-primary")
+			//隐藏subnvue
+			//#endif
+			this.platform = uni.getSystemInfoSync().platform
+			this.sysheight = uni.getSystemInfoSync().windowHeight
+			this.height = `${this.sysheight}px`
+			let width = uni.getSystemInfoSync().windowWidth
+			this.width = `${width}px`
+			//#ifdef APP-PLUS
+			uni.navigateTo({
+				url: '/pages/video/index/index_app'
+			})
+			// if (this.platform == 'android') {
+			// 	return;
+			// }
+			//#endif
+		},
+		async mounted() {
+
+			//设置id 通过id轮到相应位置
+			let id = ""
+			await this.pushVideoList()
+
+			this.index = this.videoList.reduce((total, item) => {
+				if (id == '' || id == item.id) {
+					id = ''
+				} else {
+					total++
+				}
+				return total
+			}, 0)
+			if (!this.index) {
+				this.$nextTick(() => {
+					this.videoPlay(this.index)
+				})
+			}
+
+		},
+		onHide() {
+			for (let item of this.videoList) {
+				item.flag = false
+			}
+		},
+		methods: {
+			collect(item) {
+
+				//收藏视频
+				let self = this;
+				self._get('product.collect/add', {
+					id: item.collect_id,
+					product_id: item.id,
+					type: "collect_video"
+				}, function(res) {
+					if (res.code) {
+						uni.showToast({
+							title: item.collect_status == 0 ? self.$nw("收藏成功") : self.$nw(
+								"取消成功"),
+							duration: 2000,
+							icon: 'none'
+						});
+						item.collect_status = res.data.status
+						item.collect_num = res.data.num
+					}
+				});
+
+
+
+			},
+			likec(item) {
+
+				//收藏视频
+				let self = this;
+				self._get('product.collect/add', {
+					id: item.like_id,
+					product_id: item.id,
+					type: "like_video"
+				}, function(res) {
+					if (res.code) {
+						uni.showToast({
+							title: item.like_status == 0 ? self.$nw("点赞成功") : self.$nw("取消点赞成功"),
+							duration: 2000,
+							icon: 'none'
+						});
+						item.like_status = res.data.status
+						item.like_num = res.data.num
+					}
+				});
+
+
+
+			},
+			concat(item) {
+				console.log(item);
+				uni.makePhoneCall({
+					phoneNumber: item.mobile
+				})
+			},
+			tapAvater() { //发布视频
+				uni.navigateTo({
+					url: "/plus2/pages/video/index/rel_video"
+				})
+			},
+			closeMask() { //关闭弹窗
+				console.log('click close')
+				this.videoList[this.index].showRedPacket = !this.videoList[this.index].showRedPacket
+				this.videoList = [...this.videoList];
+				this.money = 0;
+			},
+			closez() {
+				var self = this;
+				self.show_flag = false;
+				//检测该视频的收藏状态
+				self._post(
+					'plus.article.article/getCollect', {
+						article_id: self.odata.video_id
+					},
+					function(
+						res
+					) {
+						self.odata.arr[1].status = res.data.collect_status
+						self.odata.arr[1].collect_id = res.data.collect_id;
+
+					});
+			},
+			update() {
+				console.log('更新操作');
+				uni.showLoading({
+					title: '操作中'
+				})
+				let self = this;
+
+				let data = {};
+				data.token = uni.getStorageSync('token') || '';
+				data.app_id = config.app_id;
+				let websiteUrl = config.app_url;
+				uni.request({
+					url: websiteUrl + '/index.php/api/plus.sharePolite.SharePolite/setVideoProfit',
+					data: data,
+					dataType: 'json',
+					method: 'POST',
+					success: (res) => {
+						if (res.statusCode !== 200 || typeof res.data !== 'object') {
+							return false;
+						}
+						if (Number(res.data.code) === -2) {
+							// 禁止使用本商城
+							uni.redirectTo({
+								url: '/main/pages/error/error?text=' + res.data.msg
+							})
+							return false
+						} else if (res.data.code === -1) {
+							// 登录态失效, 重新登录
+							console.log('登录态失效, 重新登录');
+							uni.navigateTo({
+								url: "/user/pages/user/login"
+							});
+						} else if (res.data.code === 0) {
+							return false;
+						} else {
+							console.log(res)
+							self.money = res.data.data.amount;
+							self.videoList[self.index].showRedPacket = res.data.data.success
+							if (!res.data.data.success) {
+								uni.showModal({
+									title: '提示',
+									content: res.data.data.msg,
+									showCancel: false
+								})
+							}
+							uni.hideLoading()
+						}
+					}
+
+				});
+			},
+
+			animationFinish(e) {
+				console.log('index animationFinish')
+				//#ifdef APP-PLUS
+				// this.changeCurrent(e)
+				//#endif
+			},
+			changeCurrent(e) {
+				console.log('index changeCurrent')
+				this.index = e.detail.current;
+
+
+				this.$nextTick(() => {
+					if (this.videoList[this.index].article_content) {
+						uni.setStorageSync("videoTitle", this.videoList[this.index].article_content)
+					}
+					for (let item of this.videoList) {
+						item.flag = false
+					}
+
+					this.videoList[this.index].flag = true
+
+				})
+
+			},
+			jump(card_id) {
+				if (card_id != 0) {
+					uni.navigateTo({
+						url: "/card/pages/card/index?card_id=" + card_id
+					})
+				}
+			},
+			pushVideoList() {
+				var selfs = this;
+				// http://jshop.cc/index.php/api/plus.article.article/index?page=1&list_rows=10&category_id=0&token=&app_id=10019\
+				let promise = new Promise((resolve, reject) => {
+					let self = this;
+					let page = self.page;
+					let list_rows = self.list_rows;
+
+					let data = {
+						page: page || 1,
+						list_rows: list_rows,
+						category_id: 0
+					};
+					data.token = uni.getStorageSync('token') || '';
+					data.app_id = config.app_id;
+					let websiteUrl = config.app_url;
+					data.id = self.$parent.id
+					data.type = "video"
+					uni.request({
+						url: websiteUrl + '/index.php/api/plus.article.article/index',
+						data: data,
+						dataType: 'json',
+						method: 'GET',
+						success: (res) => {
+							if (res.statusCode !== 200 || typeof res.data !== 'object') {
+								return false;
+							}
+							if (Number(res.data.code) === -2) {
+								// 禁止使用本商城
+								uni.redirectTo({
+									url: '/main/pages/error/error?text=' + res.data.msg
+								})
+								return false
+							} else if (res.data.code === -1) {
+								// 登录态失效, 重新登录
+								console.log('登录态失效, 重新登录');
+								uni.navigateTo({
+									url: "/user/pages/user/login"
+								});
+							} else if (res.data.code === 0) {
+								return false;
+							} else {
+								console.log(res)
+								let videoGroup = []
+								for (let item of res.data.data.list.data) {
+									videoGroup.push({
+										card_id: item.user.card_id,
+										src: item.video_url,
+										article_content: item.article_title,
+										flag: false,
+										check: false,
+										like: '7w',
+										comment: '1045',
+										at: item.user ? item.user.nickname : '',
+										id: item.article_id,
+										avater: item.user ? item.user.avatarUrl : '',
+										initialTime: 0,
+										duration: 15,
+										poster: item.image_id ? item.image.file_path : '',
+										showRedPacket: false,
+										mobile: item.user.mobile,
+										collect_status: item.collect_status,
+										collect_id: item.collect_id,
+										like_status: item.like_status,
+										like_id: item.like_id,
+										like_num: item.like_num,
+										collect_num: item.collect_num,
+									})
+								}
+
+								let len = self.videoList.filter(item => item.src).length
+								for (let i = len; i < len + videoGroup.length; i++) {
+									// if ((i + 1) % 4 === 0) {
+									// 	videoGroup[i - len].showRedPacket = true
+									// }
+									self.$set(self.videoList, i, videoGroup[i - len])
+
+								}
+								resolve()
+							}
+						}
+
+					});
+
+				})
+				return promise
+			},
+			tapLove() {
+				this.videoList[this.index].check = !this.videoList[this.index].check
+				this.videoList = [...this.videoList]
+
+			},
+
+			tapMsg(item) {
+				//#ifndef APP-NVUE
+				uni.showToast({
+					icon: 'none',
+					title: `查看索引为${this.index}的评论`
+				})
+				//#endif
+				//#ifdef APP-NVUE
+				uni.getSubNVueById('comment').show('none', 0, () => {
+					uni.$emit('showComment', item.content)
+				});
+				//#endif
+			},
+			tapShare() {
+				uni.redirectTo({
+					url: '/pages/index/homePage'
+				})
+				// uni.showToast({
+				// 	icon:'none',
+				// 	title:`分享索引为${this.index}的视频`
+				// })
+			},
+			tapUser() {
+				uni.redirectTo({
+					url: '/pages/user/index/index'
+				})
+			},
+			videoPlay(index) {
+				let promise = new Promise((resolve, reject) => {
+					resolve()
+				})
+				promise.then(res => {
+					if (this.videoList[index].article_content) {
+						uni.setStorageSync("videoTitle", this.videoList[index].article_content)
+					}
+					this.$set(this.videoList[index], 'flag', !this.videoList[index].flag)
+				})
+			},
+			pauseVideo(val) {
+				if (typeof this.videoList[this.oldIndex].initialTime != 'undefined') this.videoList[this.oldIndex]
+					.initialTime = val
+			},
+			clickVideo() {
+				// this.oldIndex = this.index
+				this.videoList[this.index].flag = !this.videoList[this.index].flag
+			}
+		},
+		watch: {
+			index(newVal, oldVal) {
+				console.log('index watch index')
+				if (newVal < oldVal) {
+					this.videoList[this.index].showRedPacket = false;
+				}
+				this.money = 0;
+				let len = this.videoList.filter(item => item.src).length
+				//加载视频
+				if (len - this.index - 1 <= this.playCount) {
+					this.page++;
+					this.pushVideoList()
+				}
+				this.oldIndex = oldVal
+			}
+		}
+	}
+</script>
+<style scoped>
+	.swiper {
+		flex: 1;
+		background-color: #000;
+	}
+
+	.swiper-item {
+		flex: 1;
+	}
+
+	.video {
+		flex: 1;
+	}
+
+	.video-box {
+		flex: 1;
+		width: 750rpx;
+	}
+
+	.cover-view-left {
+		position: absolute;
+		margin-left: 10upx;
+		width: 500upx;
+		bottom: 120upx;
+		z-index: 9999;
+		font-size: 16px;
+		color: #FFFFFF;
+
+	}
+
+	.left-view {
+		margin-bottom: 20upx;
+	}
+
+	.left-text {
+		font-size: 16px;
+		color: #FFFFFF;
+	}
+
+	.avater {
+		/* border-radius: 50upx; */
+		/* border-style: solid;
+		border-width: 2px; */
+	}
+
+
+	.cover-view-right {
+		position: absolute;
+		bottom: 160upx;
+		right: 20upx;
+		/* #ifndef APP-PLUS-NVUE */
+		display: flex;
+		flex-direction: column;
+		/* #endif */
+		z-index: 9999;
+	}
+
+	.right-text-avater {
+		position: absolute;
+		font-size: 14px;
+		top: 80upx;
+		left: 30upx;
+		height: 40upx;
+		width: 40upx;
+		background-color: #DD524D;
+		color: #FFFFFF;
+		border-radius: 50%;
+		text-align: center;
+		line-height: 40upx;
+		z-index: 999;
+	}
+
+	.avater-icon {
+		height: 40upx;
+		width: 40upx;
+
+		color: #fff;
+		background-color: #DD524D;
+		border-radius: 50%;
+		position: absolute;
+		left: 30upx;
+		top: -20upx;
+	}
+
+	.right-text {
+		text-align: center;
+		font-size: 14px;
+		color: #FFFFFF;
+		margin-bottom: 50upx;
+		height: 20px;
+	}
+
+
+	.right-text1 {
+		text-align: center;
+		font-size: 14px;
+		color: #FFFFFF;
+		margin-top: 50upx;
+		height: 20px;
+	}
+
+
+	.img {
+		height: 100upx;
+		width: 100upx;
+		opacity: 0.9;
+	}
+
+	.page {
+		/* #ifndef APP-PLUS-NVUE */
+		display: flex;
+		flex-direction: column;
+		/* #endif */
+		flex: 1;
+	}
+
+	.cover-view-center {
+		position: absolute;
+		width: 600upx;
+		bottom: 300upx;
+
+		/* #ifndef APP-PLUS-NVUE */
+		right: 50%;
+		left: 50%;
+		margin-left: -300upx;
+		margin-right: -300upx;
+		/* #endif */
+		/* #ifdef APP-PLUS-NVUE */
+		/* left: 50%; */
+		right: 40%;
+		/* margin-right: -300upx; */
+		/* #endif */
+		height: 720upx;
+		padding: 60upx 0;
+		z-index: 9999;
+	}
+
+
+	.redbox-image {
+		width: 600upx;
+		height: 600upx;
+	}
+
+	.redbox-close {
+		position: absolute;
+		left: 50%;
+		/* #ifdef APP-PLUS-NVUE */
+		bottom: 20upx;
+		left: 300upx;
+		/* #endif */
+		margin-left: -16px;
+		text-align: center;
+	}
+
+	.wrapBox {
+		position: absolute;
+		width: 360upx;
+		left: 120upx;
+		/* right: 50%; */
+		/* #ifndef APP-PLUS-NVUE */
+		left: 50%;
+		margin-left: -180upx;
+		/* #endif */
+		top: 320rpx;
+		padding: 10rpx 0rpx;
+		text-align: center;
+
+	}
+
+	.tips {
+		width: 360upx;
+		text-align: center;
+		font-size: 35rpx;
+		color: #fff;
+		font-weight: bold;
+	}
+
+	.wrapBox-text {
+		font-weight: normal;
+		font-size: 50rpx;
+	}
+
+	.wrapBox-money {
+		font-size: 35rpx;
+		color: #fff;
+		margin-top: 30rpx;
+		font-weight: bold;
+	}
+
+	.wrapBox-btn {
+		margin: 20rpx 120rpx;
+		margin-top: 40rpx;
+		padding: 40rpx;
+		text-align: center;
+		background: linear-gradient(to bottom, #FFF04D, #FFE06B);
+		border-radius: 100%;
+		font-size: 40rpx;
+		color: #CF2A2A;
+		font-weight: bold;
+	}
+</style>

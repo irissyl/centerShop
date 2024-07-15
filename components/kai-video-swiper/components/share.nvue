@@ -1,0 +1,255 @@
+<template>
+	<div class="box" v-if="shareStatus" :style="{width:winWidth+'px',height:winHeight+'px'}">
+		<div @click.stop="onMask()" class="mask" :style="{width:winWidth+'px'}" @touchstart.stop='a' @touchmove.stop="b"
+		 @touchend.stop='c'></div>
+		<div class="share-box" @click.stop="e">
+
+			<text class="title">私信给</text>
+			<scroll-view class="scroll" scroll-x="true" scroll-left="0">
+				<view class="scroll-item" v-for="(item,index) in friendData" :key="index">
+					<image class="scroll-item-image" :src="item.src" @click="share(item)"></image>
+					<text class="scroll-item-text">{{item.name}}</text>
+				</view>
+			</scroll-view>
+			<text class="title">分享到</text>
+			<scroll-view class="scroll" scroll-x="true" scroll-left="0">
+				<view class="scroll-item" v-for="(item,index) in shareData" :key="index">
+					<image class="scroll-item-image" :src="item.src" @click="share(item)"></image>
+					<text class="scroll-item-text">{{item.name}}</text>
+				</view>
+			</scroll-view>
+			<scroll-view class="scroll border-top" scroll-x="true" scroll-left="0">
+				<view class="scroll-item" style="" v-for="(item,index) in actionData" :key="index">
+					<view class="scroll-item-image-box"></view>
+					<image class="scroll-item-bg-image" :src="item.src" @click="share(item)"></image>
+					<text class="scroll-item-text">{{item.name}}</text>
+				</view>
+			</scroll-view>
+
+		</div>
+	</div>
+</template>
+
+<script>
+	export default {
+		props: {
+			shareStatus: {
+				type: Boolean,
+				default: false
+			}
+		},
+		data() {
+			return {
+				winWidth: 0,
+				winHeight: 0,
+				friendData: [{
+						src: '/static/video-images/s1.png',
+						name: '贝贝'
+					},
+					{
+						src: '/static/video-images/s2.png',
+						name: '静静'
+					},
+					{
+						src: '/static/video-images/s3.png',
+						name: '欢欢'
+					},
+					{
+						src: '/static/video-images/s4.png',
+						name: '莹莹'
+					},
+					{
+						src: '/static/video-images/s5.png',
+						name: '妮妮'
+					},
+					{
+						src: '/static/video-images/s6.png',
+						name: '微微'
+					},
+					{
+						src: '/static/video-images/s7.png',
+						name: '思思'
+					},
+					{
+						src: '/static/video-images/s8.png',
+						name: '甜甜'
+					},
+					{
+						src: '/static/video-images/s9.png',
+						name: '露露'
+					},
+					{
+						src: '/static/video-images/s10.png',
+						name: '花花'
+					},
+				],
+				shareData: [{
+						src: '/static/video-images/ss-1.png',
+						name: '微信'
+					},
+					{
+						src: '/static/video-images/ss-2.png',
+						name: '朋友圈'
+					},
+					{
+						src: '/static/video-images/ss-3.png',
+						name: 'QQ空间'
+					},
+					{
+						src: '/static/video-images/ss-4.png',
+						name: 'QQ'
+					},
+					{
+						src: '/static/video-images/ss-5.png',
+						name: '微博'
+					},
+				],
+				actionData: [{
+						src: '/static/video-images/sss-1.png',
+						name: '举报'
+					},
+					{
+						src: '/static/video-images/sss-2.png',
+						name: '保存至相册'
+					},
+					{
+						src: '/static/video-images/sss-3.png',
+						name: this.$nw("收藏")
+					},
+					{
+						src: '/static/video-images/sss-4.png',
+						name: '不感兴趣'
+					},
+					{
+						src: '/static/video-images/sss-5.png',
+						name: '复制链接'
+					},
+					{
+						src: '/static/video-images/sss-6.png',
+						name: '二维码'
+					},
+				],
+				
+			}
+		},
+		created() {
+			this.getSystemInfo()
+		},
+		methods: {
+			getSystemInfo() {
+				var that = this;
+				uni.getSystemInfo({
+					success: function(res) {
+						that.winWidth = res.windowWidth;
+						that.winHeight = res.windowHeight;
+					},
+				})
+			},
+			onMask() {
+				this.$emit('mask')
+			},
+			share(e){
+				this.$emit('share',e)
+			},
+			setFriend(data){
+				this.friendData=data
+			},
+			setType(data){
+				this.shareData=data
+			},
+			setAction(data){
+				this.actionData=data
+			},
+			a() {},
+			b() {},
+			c() {},
+			d() {},
+			e() {},
+		}
+
+	}
+</script>
+
+<style scoped>
+	.box {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10000;
+	}
+
+	.mask {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10001;
+		background-color: rgba(0, 0, 0, 0.1);
+	}
+
+	.share-box {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding-top: 30px;
+		padding-bottom: 30px;
+		background-color: #262628;
+		z-index: 10002;
+		border-top-left-radius: 10px;
+		border-top-right-radius: 10px;
+	}
+
+	.title {
+		height: 30px;
+		line-height: 30px;
+		text-align: center;
+		font-size: 14px;
+		font-weight: bold;
+		color: #FFFFFF;
+	}
+
+	.scroll {
+		flex-direction: row;
+		padding: 10px;
+	}
+
+	.scroll-item {
+		padding: 5px 10px;
+		text-align: center;
+	}
+	.scroll-item-image-box{
+		width: 50px;
+		height: 50px;
+		border-radius: 100%;
+		background-color: #373737;
+	}
+	.scroll-item-bg-image{
+		width: 30px;
+		height: 30px;
+		/* padding-top: 10px;
+		padding-right: 10px;
+		padding-bottom: 10px;
+		padding-left: 10px; */
+		margin-top: -40px;
+		margin-left: 10px;
+		margin-bottom: 20px;
+	}
+	.scroll-item-image {
+		width: 50px;
+		height: 50px;
+		border-radius: 100%;
+	}
+
+	.scroll-item-text {
+		font-size: 12px;
+		text-align: center;
+		color: #CACACA;
+	}
+	.border-top{
+		border-top-width: 1px;
+		border-top-color: #363636;
+	}
+</style>

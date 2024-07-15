@@ -1,0 +1,478 @@
+<template>
+	<div>
+		<kai-video-swiper ref="swiper" @setVideoList="addData($event,true)" @tapHead="tapHead" @tapFollow="tapFollow"
+			@tapShare="tapShare" @tapDetail="tapDetail" @tapLove="tapLove" @tapComment="tapComment"
+			@tapCommentLove="tapCommentLove" @setCommentList="setCommentList" @send="send" @change="change"
+			@tapActive='tapActive' @tapLive='tapLive' @tapSearch='tapSearch' cover timingFunction='linaer' preview
+			:progressTime='10'></kai-video-swiper>
+
+	</div>
+</template>
+<script>
+	import kaiVideoSwiper from '@/components/kai-video-swiper/kai-video-swiper.nvue'
+	import config from '@/config.js';
+	export default {
+		components: {
+			kaiVideoSwiper
+		},
+		data() {
+			return {
+				/* 地区视频索引 */
+				placeIndex: 0,
+				/* 地区视频数据 */
+				placeData: [],
+				/* 关注视频索引 */
+				followIndex: 0,
+				/* 关注视频数据 */
+				followData: [],
+				/* 推荐视频索引 */
+				recommendIndex: 0,
+				/* 推荐视频数据 */
+				recommendData: [],
+				/* 视图 */
+				viewNum: 2,
+				/*视频列表*/
+				videoList: [],
+				paging: {
+					page: 1,
+					list_rows: 5
+				},
+			}
+		},
+		onLoad(e) {
+
+		},
+		created() {
+			let arr = [{
+				src: '/static/video-images/s1.png',
+				name: '莱莱'
+			}]
+			this.$nextTick(() => {
+				let self = this
+				self.getData(self.paging, function(data) {
+					self.videoList = self.handleVideoData(data)
+					self.addData()
+					/* 设置分享朋友列表 */
+					// this.$refs.swiper.setShareFriend(arr)
+
+					/* 是否展示头部信息 推荐，关注，同城 默认false */
+					self.$refs.swiper.topShow(false) //
+					/* 设置顶部信息 */
+					self.$refs.swiper.setPlace('浦东')
+					self.$refs.swiper.setFollowNum(1)
+					self.$refs.swiper.setPlaceNum(1)
+					/* 设置tabBar高度，用于评论弹出输入框与键盘顶部无缝衔接，如果没有tabBar就不用设置 */
+					self.$refs.swiper.setTabBarHeight(30)
+				})
+
+			})
+		},
+		onHide() {
+			this.$refs.swiper.stop() //暂停播放
+		},
+		methods: {
+			tapActive(num) {
+				return;
+				if (this.viewNum == num) return
+				this.$refs.swiper.stop()
+				this.viewNum = num
+				switch (num) {
+					case 0:
+						this.$refs.swiper.setRecommendNum(1)
+						this.$refs.swiper.setFollowNum(1)
+						this.$refs.swiper.setPlaceNum(0)
+						this.$refs.swiper.showLive(false)
+
+						this.$refs.swiper.previewVideo(this.placeIndex, this.placeData)
+						break;
+					case 1:
+						this.$refs.swiper.setRecommendNum(1)
+						this.$refs.swiper.setFollowNum(0)
+						this.$refs.swiper.setPlaceNum(1)
+						this.$refs.swiper.showLive(false)
+
+						this.$refs.swiper.previewVideo(this.followIndex, this.followData)
+						break;
+					case 2:
+						this.$refs.swiper.setRecommendNum(0)
+						this.$refs.swiper.setFollowNum(1)
+						this.$refs.swiper.setPlaceNum(1)
+						this.$refs.swiper.showLive(true)
+
+						this.$refs.swiper.previewVideo(this.recommendIndex, this.recommendData)
+						break;
+				}
+			},
+			tapLive(item) {
+				this.toast('直播')
+			},
+			tapSearch() {
+				this.toast('搜索')
+			},
+			refresh() {
+				this.$refs.swiper.stop()
+				let videoArr = JSON.parse(JSON.stringify(videoData.data))
+				videoArr.sort(() => Math.random() - 0.5)
+				switch (this.viewNum) {
+					case 0:
+						this.placeIndex = 0
+						this.placeData = [...videoArr]
+						this.$refs.swiper.previewVideo(this.placeIndex, this.placeData)
+						break;
+					case 1:
+						this.followIndex = 0
+						this.followData = [...videoArr]
+						this.$refs.swiper.previewVideo(this.followIndex, this.followData)
+						break;
+					case 2:
+						this.recommendIndex = 0
+						this.recommendData = [...videoArr]
+						this.$refs.swiper.previewVideo(this.recommendIndex, this.recommendData)
+						break;
+				}
+			},
+			//获取短视频列表 如果是追加数据addDataStatus为true
+			addData(item, addDataStatus) {
+				let self = this
+				if (addDataStatus) {
+					self.paging.page++
+					self.getData(self.paging, function(data) {
+						switch (self.viewNum) {
+							case 0:
+								// this.placeData = [...this.placeData,...videoArr]
+								// this.$refs.swiper.setVideoData(videoArr)
+								break;
+							case 1:
+								// this.followData = [...this.followData,...videoArr]
+								// this.$refs.swiper.setVideoData(videoArr)
+								break;
+							case 2:
+								let temp = self.handleVideoData(data)
+								// self.recommendData = [...self.recommendData, ...temp]
+								self.$refs.swiper.setVideoData(temp)
+								break;
+						}
+					})
+					return
+				}
+				// 初始化数据
+				// this.placeData = videoArr
+				// this.followData = this.videoList
+				this.recommendData = this.videoList
+				console.log(2222212212222222)
+				console.log(this.recommendData)
+				// 初始化播放推荐中的视频
+				this.$refs.swiper.previewVideo(this.recommendIndex, this.recommendData)
+			},
+			getData(params, cb) {
+				let self = this
+				let data = {}
+				data.token = uni.getStorageSync('token') || ''
+				data.page = params.page || 1
+				data.list_rows = params.list_rows || 5
+				data.app_id = config.app_id;
+				let websiteUrl = config.app_url;
+				console.log(data)
+				data.type = "video"
+				uni.request({
+					url: websiteUrl + '/index.php/api/plus.article.article/index',
+					data: data,
+					dataType: 'json',
+					method: 'POST',
+					success: (res) => {
+						if (res.statusCode !== 200 || typeof res.data !== 'object') {
+							return false;
+						}
+						if (Number(res.data.code) === -2) {
+							// 禁止使用本商城
+							uni.navigateTo({
+								url: '/main/pages/error/error?text=' + res.data.msg
+							})
+							return false
+						} else if (res.data.code === -1) {
+							// 登录态失效, 重新登录
+							console.log('登录态失效, 重新登录');
+							uni.navigateTo({
+								url: "/user/pages/user/login"
+							});
+						} else if (res.data.code === 0) {
+							return false;
+						} else {
+							console.log(88888888)
+							console.log(res)
+
+							let list = res.data.data.list.data
+
+							console.log("9999", list)
+							cb(list)
+							uni.hideLoading()
+						}
+					}
+				})
+			},
+			handleVideoData(data) {
+				let res = []
+				data.forEach(function(item) {
+					console.log("item,",item)
+					let temp = {
+						id: '1',
+						src: '', //视频连接
+						flag: false, //播放状态，初始都为false
+						description: "视频描述", //描述
+						dubbedText: "", //音乐
+						advert: false, //是否展示广告
+						spuLinkUrl: null, //广告链接
+						expert: {
+							id: '',
+							nickName: '', //昵称
+							faceUrl: '', //头像
+						},
+						loveNum: 10, //点赞数
+						commentNum: 10, //评论数
+						shareNum: 10, //转发数
+						isLove: true, //点赞状态
+						isFollow: false, //关注状态
+						// coverUrl: '/static/videos/1-1.png', //封面图片地址 组件cover属性为true时生效
+						coverStatus: true, //视频播放前的遮罩，初始值为true
+						// mode: 'scaleToFill', //封面图缩放模式 可参考image组件的mode属性（默认 scaleToFill）
+						objectFit: 'contain', //视频表现形式 可参考video组件的object-fit属性: contain：包含，fill：填充，cover：覆盖 （默认：fill）
+						mobile: "",
+						collect_status: "",
+						collect_id: "",
+						flag:false,
+					}
+					temp.id = item.article_id
+					temp.src = item.video_url
+					temp.poster = item.image_url
+					temp.description = item.article_title
+				
+					if (item.user) {
+						temp.expert.id = item.user.user_id
+						temp.expert.nickName = item.user ? item.user.nickname : '';
+						temp.expert.faceUrl = item.user ? item.user.avatarUrl : '';
+					}
+					temp.mobile = item.mobile;
+					temp.collect_status = item.collect_status;
+					temp.collect_id = item.collect_id;
+					
+					temp.like_status =  item.like_status
+					temp.like_id = item.like_id
+					temp.like_num = item.like_num
+					temp.collect_num =item.collect_num
+
+
+					res.push(temp)
+				});
+				// res[res.length - 1].showRedPacket = true
+				return res
+			},
+			//切换视频
+			change(data) {
+				let text
+				switch (this.viewNum) {
+					case 0:
+						text = '地区'
+						this.placeIndex = data.index
+						break;
+					case 1:
+						text = '关注'
+						this.followIndex = data.index
+						break;
+					case 2:
+						text = '推荐'
+						this.recommendIndex = data.index
+						break;
+				}
+				if (data.index % 5 === 0 && data.index != 0) {
+					data.video.advert = false
+				} else {
+					data.video.advert = false
+				}
+				// data.video.description = text+'-视频-这是第'+data.index+'个视频'
+			},
+			//视频点赞
+			tapLove(item) {
+				this.$refs.swiper.changeLove()
+			},
+			//点击头像
+			tapHead(item) {
+				this.toast('点击头像')
+			},
+
+			//点击关注
+			tapFollow(item) {
+				this.$refs.swiper.changeFollow()
+			},
+
+			//点击分享
+			tapShare(item) {
+				// this.toast(item.type.name)
+				uni.reLaunch({
+					url: '/pages/index/homePage'
+				})
+			},
+
+			//点击商品详情
+			tapDetail(item) {
+				this.toast('商品详情')
+			},
+			//获取视频评论列表
+			tapComment(e) {
+				let obj = {
+					id: '123456789',
+					userInfo: {
+						nickName: '绝世高手',
+						faceUrl: '/static/video-images/s2.png',
+					},
+					isLove: true,
+					num: 15,
+					time: '2021-04-27 12:12',
+					text: '一曲肝肠断，天涯何处觅知音'
+				}
+				let data = []
+				for (let i = 0; i <= 20; i++) {
+					let o = JSON.parse(JSON.stringify(obj))
+					o.id = o.id + i
+					o.num = o.num + i
+					o.userInfo.nickName = o.userInfo.nickName + i
+					o.isLove = i % 2 == 0 ? true : false
+					data.push(o)
+				}
+				this.$refs.swiper.commentInit(data, false)
+
+			},
+
+			// 评论列表点赞
+			tapCommentLove(item) {
+				this.$refs.swiper.changeCommentLove()
+			},
+			// 追加评论列表数据
+			setCommentList(text) {
+				console.info(123546)
+				let commentList = [{
+					userInfo: {
+						faceUrl: '/static/logo.png',
+						nickName: '测试'
+					},
+					id: 123,
+					num: 0,
+					text: "追加评论数据",
+					isLove: false,
+				}];
+				// 如果参数为true，说明没有数据了
+				this.$refs.swiper.setCommentData(commentList, true)
+			},
+			//发送评论
+			send(data) {
+				let commentList = {
+					userInfo: {
+						faceUrl: '/static/logo.png',
+						nickName: '靓仔'
+					},
+					id: 0,
+					num: 0,
+					text: data.text,
+					isLove: false,
+				}
+				this.$refs.swiper.frontAddData(commentList)
+				this.$refs.swiper.sendOver()
+			},
+			toast(text) {
+				uni.showToast({
+					title: text,
+					icon: 'none'
+				})
+			}
+		},
+		beforeDestroy() {
+			// this.$refs.swiper.stop() //暂停播放
+		}
+	}
+</script>
+
+<style scoped>
+	/* 新添加 */
+	.cover-view-center {
+		position: fixed;
+		width: 600upx;
+		bottom: 300upx;
+
+		/* #ifndef APP-PLUS-NVUE */
+		right: 50%;
+		left: 50%;
+		margin-left: -300upx;
+		margin-right: -300upx;
+		/* #endif */
+		/* #ifdef APP-PLUS-NVUE */
+		/* left: 50%; */
+		right: 40%;
+		/* margin-right: -300upx; */
+		/* #endif */
+		height: 720upx;
+		padding: 60upx 0;
+		z-index: 99999;
+	}
+
+	.redbox-image {
+		width: 600upx;
+		height: 600upx;
+	}
+
+	.redbox-close {
+		position: absolute;
+		left: 50%;
+		/* #ifdef APP-PLUS-NVUE */
+		bottom: 20upx;
+		left: 300upx;
+		/* #endif */
+		margin-left: -16px;
+		text-align: center;
+	}
+
+	.wrapBox {
+		position: absolute;
+		width: 360upx;
+		left: 120upx;
+		/* right: 50%; */
+		/* #ifndef APP-PLUS-NVUE */
+		left: 50%;
+		margin-left: -180upx;
+		/* #endif */
+		top: 320rpx;
+		padding: 10rpx 0rpx;
+		text-align: center;
+
+	}
+
+	.tips {
+		width: 360upx;
+		text-align: center;
+		font-size: 35rpx;
+		color: #fff;
+		font-weight: bold;
+	}
+
+	.wrapBox-text {
+		font-weight: normal;
+		font-size: 50rpx;
+	}
+
+	.wrapBox-money {
+		font-size: 35rpx;
+		color: #fff;
+		margin-top: 30rpx;
+		font-weight: bold;
+	}
+
+	.wrapBox-btn {
+		margin: 20rpx 120rpx;
+		margin-top: 40rpx;
+		padding: 40rpx;
+		text-align: center;
+		background: linear-gradient(to bottom, #FFF04D, #FFE06B);
+		border-radius: 100%;
+		font-size: 40rpx;
+		color: #CF2A2A;
+		font-weight: bold;
+	}
+</style>

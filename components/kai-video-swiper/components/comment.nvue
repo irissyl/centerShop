@@ -1,0 +1,409 @@
+<template>
+	<cover-view class="box" v-if="commentStatus" :style="{width:winWidth+'px',height:winHeight+'px'}">
+		<div @click.stop="onMask()" class="mask" :style="{width:winWidth+'px'}" @touchstart.stop='a' @touchmove.stop="b"
+			@touchend.stop='c'></div>
+		<cover-view class="comment-box" :style="{height:winHeight/10*7+'px'}" @click.stop="e">
+			<div class="top"></div>
+			<div class="bottom">
+				<div class="py-1  a-center">
+					<text class="text-white" style="font-size: 30rpx;">评论</text>
+				</div>
+				<scroll-view @scrolltolower="onLoading" :scroll-top='scrollToTop' scroll-with-animation scroll-y class="flex-1">
+					<div v-for="(item,index) in list" :key="index" class="py-1 flex-column">
+						<div class="py-2 flex-row">
+							<image :src="item.userInfo.faceUrl" mode="" class="rounded-circle ml-2"
+								style="width: 50rpx;height: 50rpx;"></image>
+							<div class="flex-1  flex-column mx-1" style="margin-top: 5px;">
+								<text class="text-light-muted"
+									style="font-size: 30rpx;">{{item.userInfo.nickName}}</text>
+							</div>
+							<div class=" a-center" style="width: 120rpx;">
+								<text @click="tapLove(item,index)" :class="item.isLove?'red-heat':'white-heat'"
+									class="iconfont iconfont-size-heat ">&#xe64e;</text>
+								<text class="text-light-muted" style="font-size: 24rpx;">{{item.num}}</text>
+							</div>
+						</div>
+						<div style="margin-left: 110rpx;margin-right: 100rpx;margin-top: -60rpx;">
+							<text class="text-white mt-1" style="font-size: 30rpx;">{{item.text}}</text>
+						</div>
+					</div>
+					<div v-if="noData" class="pt-3 a-center" style="height: 70px;width:750rpx">
+						<text class="text-muted" style="font-size: 30rpx;">{{loadingText}}</text>
+					</div>
+				</scroll-view>
+				<cover-view @click="showKey" class="bg-dark px-1 j-center" style="height: 60rpx;">
+					<text class="text-light-muted " style="font-size: 24rpx;">说点什么吧~~</text>
+				</cover-view>
+				<cover-view v-if="focusStatus" @click.stop="onMask()" class="mask1" :style="{width:winWidth+'px'}"
+					@touchstart.stop='a' @touchmove.stop="b" @touchend.stop='c'></cover-view>
+				<cover-view v-if="focusStatus" class="mask2" :style="{width:winWidth+'px',height:keyHeightMask-tabBar+'px'}">
+				</cover-view>
+				<cover-view v-if="focusStatus" class="j-center flex-row  bg-dark input-box"
+					:style="{bottom:keyHeight-tabBar+'px'}">
+					<textarea class="flex-1 px-1  bg-dark text-light-muted text-top" v-model="text" :focus="focusStatus"
+						:adjust-position="false" @focus="focus" @blur="blur" cursor-spacing="1" show-confirm-bar="true"
+						style="font-size: 30rpx;height:150rpx;" :placeholder="placeholder" @keyboardheightchange="keyboardheightchange"></textarea>
+					<div class="j-center a-center px-1 mx-1 bg-primary rounded" style="height: 50rpx;margin-top: 90rpx;"
+						@click="send">
+						<text style="color: #FFFAE8;font-size: 25rpx;">发送</text>
+					</div>
+				</cover-view>
+			</div>
+		</cover-view>
+	</cover-view>
+</template>
+
+<script>
+	export default {
+		props: {
+			commentStatus: {
+				type: Boolean,
+				default: false
+			}
+		},
+		data() {
+			return {
+				list: [],
+				text: null,
+				noData: false,
+				loadingShow: false,
+				loadingText: '没有更多评论了',
+				focusStatus: false,
+				placeholder: "说点什么吧",
+				winWidth: 0,
+				winHeight: 0,
+				commentIndex: 0,
+				initStatus: false,
+				videoId: null,
+				keyHeight: 0,
+				keyHeightMask: 0,
+				showStatus: false,
+				scrollToTop: 0,
+				tabBar: 0
+			}
+		},
+		created() {
+			this.getSystemInfo()
+			let h = uni.getStorageSync('keyHeight')
+			if (!h || h == '' || h<300) {
+				uni.onKeyboardHeightChange(res => {
+					this.keyHeight = res.height
+					this.keyHeightMask = res.height
+					uni.setStorageSync('keyHeight', res.height)
+					uni.setStorageSync('keyHeightMask', this.keyHeightMask)
+					uni.offKeyboardHeightChange(function(){
+					})
+				})
+			}
+		},
+		methods: {
+			getSystemInfo() {
+				var that = this;
+				uni.getSystemInfo({
+					success: function(res) {
+						that.winWidth = res.windowWidth;
+						that.winHeight = res.windowHeight;
+					},
+				})
+			},
+			setTabBarHeight(h){
+			  this.tabBar = h  
+			},
+			showKey() {
+				let h = uni.getStorageSync('keyHeight')
+				let m = uni.getStorageSync('keyHeightMask')
+				if (h) {
+					this.keyHeight = h
+					this.keyHeightMask = m
+				}
+				this.focusStatus = true
+			},
+			hideKey() {
+				this.focusStatus = false
+				uni.hideKeyboard()
+			},
+			sendOver() {
+				this.text = ""
+				this.hideKey()
+			},
+			send() {
+				if(this.text == '') {
+					uni.showToast({
+						title:'内容不能为空',
+						icon:'none'
+					})
+					return
+				}
+				this.$emit("send", this.text)
+				this.scrollToTop = 0
+				setTimeout(()=>{
+					this.scrollToTop = 2
+				},100)
+			},
+
+			focus() {
+				this.focusStatus = true
+			},
+			blur() {
+				this.focusStatus = false
+			},
+			lower() {
+
+			},
+			// 上拉加载事件
+			onLoading() {
+				if (this.noData) return
+				if (!this.initStatus) return
+				this.$emit('setCommentList')
+			},
+			init(arrlist, check) {
+				this.initStatus = true
+				this.list = arrlist
+				if (check) {
+					this.noData = true
+				}
+			},
+			changeData() {
+				this.videoId = null
+				this.list = []
+				this.initStatus = false
+				this.noData = false
+			},
+			setCommentData(arrlist, check) {
+				if (Array.isArray(arrlist)) {
+					this.list = [...this.list, ...arrlist]
+				}
+				if (check) {
+					this.noData = true
+				}
+			},
+			frontAddData(item) {
+				this.list.unshift(item)
+			},
+			tapLove(item, index) {
+				this.commentIndex = index
+				this.$emit("tapCommentLove", item)
+			},
+			changeCommentLove() {
+				this.list[this.commentIndex].isLove = !this.list[this.commentIndex].isLove
+				if (this.list[this.commentIndex].isLove) {
+					this.list[this.commentIndex].num++
+					return
+				}
+				this.list[this.commentIndex].num--
+			},
+			onMask() {
+				if (this.focusStatus) {
+					this.hideKey()
+					return
+				}
+				this.$emit('mask')
+			},
+			keyboardheightchange(e){
+				if(e.detail.height < 10){
+				    this.hideKey()
+				}
+				if(e.detail.height>300){
+					this.keyHeight = e.detail.height
+					this.keyHeightMask = e.detail.height + 50
+				}
+			},
+			a() {},
+			b() {},
+			c() {},
+			d() {},
+			e() {}
+		}
+
+	}
+</script>
+
+<style scoped>
+	.box {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10000;
+	}
+
+	.mask {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10001;
+		background-color: rgba(0, 0, 0, 0.1);
+	}
+
+	.mask1 {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10004;
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+
+	.mask2 {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10005;
+		background-color: #FFFFFF;
+	}
+
+	.comment-box {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: #FFFFFF;
+		z-index: 10002;
+		flex-direction: column;
+		background-color: transparent;
+	}
+
+	.iconfont {
+		font-family: iconfont;
+	}
+
+	.iconfont-size-heat {
+		font-size: 40rpx;
+		text-align: center;
+	}
+
+	.white-heat {
+		color: #eee;
+	}
+
+	.red-heat {
+		color: #FF1B00;
+	}
+
+	.top {
+		background-color: #000;
+		opacity: 0.1;
+	}
+
+	.bottom {
+		background-color: #262626;
+		flex: 1;
+		border-top-left-radius: 10px;
+		border-top-right-radius: 10px;
+	}
+
+	.bottom-title {
+		flex: 1;
+		height: 30px;
+		line-height: 30px;
+		text-align: center;
+		font-size: 14px;
+		color: #888;
+	}
+
+	.text-top {
+		padding-top: 10rpx;
+	}
+
+	.loading {
+		height: 20px;
+		width: 20px;
+		color: #FFFFFF;
+	}
+
+	.py-1 {
+		padding-top: 10px;
+		padding-bottom: 10px;
+	}
+
+	.a-center {
+		align-items: center;
+	}
+
+	.text-white {
+		color: #ffffff;
+	}
+
+	.text-light-muted {
+		color: #B2B2B2 !important;
+	}
+
+	.flex-1 {
+		flex: 1;
+	}
+
+	.flex-column {
+		flex-direction: column;
+	}
+
+	.flex-row {
+		flex-direction: row;
+	}
+
+	.py-2 {
+		padding-top: 20px;
+		padding-bottom: 20px;
+	}
+
+	.rounded-circle {
+		border-radius: 100%;
+	}
+
+	.rounded {
+		border-radius: 5px;
+	}
+
+	.ml-2 {
+		margin-left: 20px;
+	}
+
+	.mr-1 {
+		margin-right: 10px;
+	}
+
+	.mx-1 {
+		margin-left: 10px;
+		margin-right: 10px;
+	}
+
+	.mt-1 {
+		margin-top: 10px;
+	}
+
+	.pt-3 {
+		padding-top: 30px;
+	}
+
+	.px-1 {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+
+	.text-muted {
+		color: #6c757d;
+	}
+
+	.j-center {
+		justify-content: center;
+	}
+
+	.bg-dark {
+		background-color: #343a40;
+	}
+
+	.bg-primary {
+		background-color: #007bff;
+	}
+
+	.input-box {
+		height: 150rpx;
+		position: fixed;
+		left: 0;
+		right: 0;
+	}
+</style>
